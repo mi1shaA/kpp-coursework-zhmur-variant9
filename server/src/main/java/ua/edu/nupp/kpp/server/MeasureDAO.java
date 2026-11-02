@@ -12,7 +12,7 @@ public class MeasureDAO {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, measure.getAuditId());
             ps.setString(2, measure.getTitle());
-            ps.setString(3, measure.getState());
+            ps.setString(3, measure.getState().name());
             ps.setDouble(4, measure.getF1());
             ps.setDouble(5, measure.getF2());
             ps.setDouble(6, measure.getF3());
@@ -32,7 +32,7 @@ public class MeasureDAO {
                         rs.getLong("id"),
                         rs.getLong("audit_id"),
                         rs.getString("title"),
-                        rs.getString("state"),
+                        MeasureState.valueOf(rs.getString("state")),
                         rs.getDouble("f1"),
                         rs.getDouble("f2"),
                         rs.getDouble("f3")
@@ -53,7 +53,7 @@ public class MeasureDAO {
                             rs.getLong("id"),
                             rs.getLong("audit_id"),
                             rs.getString("title"),
-                            rs.getString("state"),
+                            MeasureState.valueOf(rs.getString("state")),
                             rs.getDouble("f1"),
                             rs.getDouble("f2"),
                             rs.getDouble("f3")
@@ -70,12 +70,22 @@ public class MeasureDAO {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, measure.getAuditId());
             ps.setString(2, measure.getTitle());
-            ps.setString(3, measure.getState());
+            ps.setString(3, measure.getState().name());
             ps.setDouble(4, measure.getF1());
             ps.setDouble(5, measure.getF2());
             ps.setDouble(6, measure.getF3());
             ps.setDouble(7, measure.getIntegralIndex());
             ps.setLong(8, measure.getId());
+            ps.executeUpdate();
+        }
+    }
+
+    public void updateState(long id, MeasureState state) throws SQLException {
+        String sql = "UPDATE measure SET state = ? WHERE id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, state.name());
+            ps.setLong(2, id);
             ps.executeUpdate();
         }
     }

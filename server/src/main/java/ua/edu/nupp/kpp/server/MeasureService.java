@@ -8,7 +8,6 @@ public class MeasureService {
 
     private static final Logger LOG = Logger.getLogger(MeasureService.class.getName());
     private final MeasureDAO dao = new MeasureDAO();
-    private final EnergyAuditDAO auditDAO = new EnergyAuditDAO();
 
     private void validate(Measure measure) {
         if (measure.getF1() < 0 || measure.getF1() > 100 ||
@@ -28,17 +27,51 @@ public class MeasureService {
 
     public void add(Measure measure) throws SQLException {
         validate(measure);
+
+        // Використовуємо наш MeasureCalculator для розрахунку інтегрального показника
+        double calculatedIndex = MeasureCalculator.calculate(measure.getF1(), measure.getF2(), measure.getF3());
+        measure.setIntegralIndex(calculatedIndex); // Переконайся, що в моделі Measure є сеттер для integralIndex
+
+        // Новий захід завжди отримує початковий стан PROPOSED
+        measure.setState(MeasureState.PROPOSED);
+
         dao.add(measure);
-        LOG.info("Успішно додано вимірювання");
+        LOG.info("Успішно додано захід. Розрахований інтегральний індекс: " + calculatedIndex);
     }
 
     public void update(Measure measure) throws SQLException {
         validate(measure);
+
+        // Перераховуємо індекс при оновленні факторів
+        double calculatedIndex = MeasureCalculator.calculate(measure.getF1(), measure.getF2(), measure.getF3());
+        measure.setIntegralIndex(calculatedIndex);
+
         dao.update(measure);
-        LOG.info("Успішно оновлено вимірювання");
+        LOG.info("Успішно оновлено захід. Новий інтегральний індекс: " + calculatedIndex);
     }
 
     public void delete(long id) throws SQLException {
         dao.delete(id);
-        LOG.info("Успішно видалено вимірювання");    }
+        LOG.info("Успішно видалено захід із ID: " + id);
+    }
+
+    public static boolean isAllowedTransition(MeasureState from, MeasureState to) {
+        return (from == MeasureState.PROPOSED && to == MeasureState.APPROVED)
+                || (from == MeasureState.APPROVED && to == MeasureState.IMPLEMENTATION)
+                || (from == MeasureState.IMPLEMENTATION && to == MeasureState.COMPLETED);
+    }
+
+    public void changeState(long id, MeasureState next) throws SQLException {
+        Measure current = dao.getById(id);
+        if (current == null) {
+            LOG.warning("Помилка: захід не знайдено для зміни стану (ID: " + id + ")");
+            throw new IllegalArgumentException("Захід не знайдено");
+        }
+        if (!isAllowedTransition(current.getState(), next)) {
+            LOG.warning("Недопустимий перехід стану: " + current.getState() + " -> " + next);
+            throw new IllegalArgumentException("Недопустимий перехід стану");
+        }
+        dao.updateState(id, next);
+        LOG.info("Змінено стан заходу (ID: " + id + "): " + current.getState() + " -> " + next);
+    }
 }
