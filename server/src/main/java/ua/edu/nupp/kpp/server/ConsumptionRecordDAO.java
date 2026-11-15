@@ -7,7 +7,7 @@ import java.util.List;
 public class ConsumptionRecordDAO {
 
     public void add(ConsumptionRecord record) throws SQLException {
-        String sql = "INSERT INTO consumption_record (audit_id, resource_type, amount, record_date) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO consumption_record (object_id, resource_type, consumption_value, period) VALUES (?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, record.getObjectId());
@@ -19,7 +19,7 @@ public class ConsumptionRecordDAO {
     }
 
     public List<ConsumptionRecord> getAll() throws SQLException {
-        String sql = "SELECT id, audit_id, resource_type, amount, record_date FROM consumption_record ORDER BY id";
+        String sql = "SELECT id, object_id, resource_type, consumption_value, period FROM consumption_record ORDER BY id";
         List<ConsumptionRecord> records = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              Statement stmt = conn.createStatement();
@@ -27,10 +27,10 @@ public class ConsumptionRecordDAO {
             while (rs.next()) {
                 records.add(new ConsumptionRecord(
                         rs.getLong("id"),
-                        rs.getLong("audit_id"),
+                        rs.getLong("object_id"),
                         rs.getString("resource_type"),
-                        rs.getDouble("amount"),
-                        rs.getString("record_date")
+                        rs.getDouble("consumption_value"),
+                        rs.getString("period")
                 ));
             }
         }
@@ -38,7 +38,7 @@ public class ConsumptionRecordDAO {
     }
 
     public ConsumptionRecord getById(long id) throws SQLException {
-        String sql = "SELECT id, audit_id, resource_type, amount, record_date FROM consumption_record WHERE id = ?";
+        String sql = "SELECT id, object_id, resource_type, consumption_value, period FROM consumption_record WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
@@ -46,10 +46,10 @@ public class ConsumptionRecordDAO {
                 if (rs.next()) {
                     return new ConsumptionRecord(
                             rs.getLong("id"),
-                            rs.getLong("audit_id"),
+                            rs.getLong("object_id"),
                             rs.getString("resource_type"),
-                            rs.getDouble("amount"),
-                            rs.getString("record_date")
+                            rs.getDouble("consumption_value"),
+                            rs.getString("period")
                     );
                 }
             }
@@ -58,7 +58,7 @@ public class ConsumptionRecordDAO {
     }
 
     public void update(ConsumptionRecord record) throws SQLException {
-        String sql = "UPDATE consumption_record SET audit_id = ?, resource_type = ?, amount = ?, record_date = ? WHERE id = ?";
+        String sql = "UPDATE consumption_record SET object_id = ?, resource_type = ?, consumption_value = ?, period = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, record.getObjectId());

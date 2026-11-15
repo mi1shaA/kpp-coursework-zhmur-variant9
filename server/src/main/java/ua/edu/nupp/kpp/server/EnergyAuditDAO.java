@@ -7,7 +7,7 @@ import java.util.List;
 public class EnergyAuditDAO {
 
     public void add(EnergyAudit audit) throws SQLException {
-        String sql = "INSERT INTO energy_audit (object_id, audit_date, auditor, status) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO energy_audit (object_id, audit_date, auditor, notes) VALUES (?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, audit.getObjectId());
@@ -19,7 +19,7 @@ public class EnergyAuditDAO {
     }
 
     public List<EnergyAudit> getAll() throws SQLException {
-        String sql = "SELECT id, object_id, audit_date, auditor, status FROM energy_audit ORDER BY id";
+        String sql = "SELECT id, object_id, audit_date, auditor, notes FROM energy_audit ORDER BY id";
         List<EnergyAudit> audits = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              Statement stmt = conn.createStatement();
@@ -30,7 +30,7 @@ public class EnergyAuditDAO {
                         rs.getLong("object_id"),
                         rs.getString("audit_date"),
                         rs.getString("auditor"),
-                        rs.getString("status")
+                        rs.getString("notes")
                 ));
             }
         }
@@ -38,7 +38,7 @@ public class EnergyAuditDAO {
     }
 
     public EnergyAudit getById(long id) throws SQLException {
-        String sql = "SELECT id, object_id, audit_date, auditor, status FROM energy_audit WHERE id = ?";
+        String sql = "SELECT id, object_id, audit_date, auditor, notes FROM energy_audit WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
@@ -49,7 +49,7 @@ public class EnergyAuditDAO {
                             rs.getLong("object_id"),
                             rs.getString("audit_date"),
                             rs.getString("auditor"),
-                            rs.getString("status")
+                            rs.getString("notes")
                     );
                 }
             }
@@ -58,7 +58,7 @@ public class EnergyAuditDAO {
     }
 
     public void update(EnergyAudit audit) throws SQLException {
-        String sql = "UPDATE energy_audit SET object_id = ?, audit_date = ?, auditor = ?, status = ? WHERE id = ?";
+        String sql = "UPDATE energy_audit SET object_id = ?, audit_date = ?, auditor = ?, notes = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, audit.getObjectId());

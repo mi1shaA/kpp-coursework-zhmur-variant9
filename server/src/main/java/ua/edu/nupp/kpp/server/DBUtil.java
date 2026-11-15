@@ -9,6 +9,14 @@ public final class DBUtil {
     private static final String USER = "root";
     private static final String PASSWORD = ""; // Запиши свій пароль від MySQL, якщо він встановлений
 
+    static {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new ExceptionInInitializerError("Не знайдено MySQL JDBC драйвер: " + e.getMessage());
+        }
+    }
+
     private DBUtil() {
     }
 

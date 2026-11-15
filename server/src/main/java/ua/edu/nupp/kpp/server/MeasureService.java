@@ -8,8 +8,16 @@ public class MeasureService {
 
     private static final Logger LOG = Logger.getLogger(MeasureService.class.getName());
     private final MeasureDAO dao = new MeasureDAO();
+    private final EnergyAuditDAO auditDAO = new EnergyAuditDAO();
 
-    private void validate(Measure measure) {
+    private void validate(Measure measure) throws SQLException {
+        if (measure == null) {
+            throw new IllegalArgumentException("Захід не задано");
+        }
+        if (auditDAO.getById(measure.getAuditId()) == null) {
+            throw new IllegalArgumentException("Енергоаудит з ID " + measure.getAuditId() + " не існує");
+        }
+        ObjectItemService.requireText(measure.getTitle(), "Назва заходу", 200);
         if (measure.getF1() < 0 || measure.getF1() > 100 ||
                 measure.getF2() < 0 || measure.getF2() > 100 ||
                 measure.getF3() < 0 || measure.getF3() > 100) {
@@ -28,9 +36,8 @@ public class MeasureService {
     public void add(Measure measure) throws SQLException {
         validate(measure);
 
-        // Використовуємо наш MeasureCalculator для розрахунку інтегрального показника
         double calculatedIndex = MeasureCalculator.calculate(measure.getF1(), measure.getF2(), measure.getF3());
-        measure.setIntegralIndex(calculatedIndex); // Переконайся, що в моделі Measure є сеттер для integralIndex
+        measure.setIntegralIndex(calculatedIndex);
 
         // Новий захід завжди отримує початковий стан PROPOSED
         measure.setState(MeasureState.PROPOSED);
@@ -42,7 +49,13 @@ public class MeasureService {
     public void update(Measure measure) throws SQLException {
         validate(measure);
 
-        // Перераховуємо індекс при оновленні факторів
+        Measure current = dao.getById(measure.getId());
+        if (current == null) {
+            throw new IllegalArgumentException("Захід з ID " + measure.getId() + " не знайдено");
+        }
+        // Стан змінюється тільки через changeState(), тут він зберігається без змін
+        measure.setState(current.getState());
+
         double calculatedIndex = MeasureCalculator.calculate(measure.getF1(), measure.getF2(), measure.getF3());
         measure.setIntegralIndex(calculatedIndex);
 
@@ -62,6 +75,9 @@ public class MeasureService {
     }
 
     public void changeState(long id, MeasureState next) throws SQLException {
+        if (next == null) {
+            throw new IllegalArgumentException("Стан не задано");
+        }
         Measure current = dao.getById(id);
         if (current == null) {
             LOG.warning("Помилка: захід не знайдено для зміни стану (ID: " + id + ")");
@@ -69,7 +85,7 @@ public class MeasureService {
         }
         if (!isAllowedTransition(current.getState(), next)) {
             LOG.warning("Недопустимий перехід стану: " + current.getState() + " -> " + next);
-            throw new IllegalArgumentException("Недопустимий перехід стану");
+            throw new IllegalArgumentException("Недопустимий перехід стану: " + current.getState() + " → " + next);
         }
         dao.updateState(id, next);
         LOG.info("Змінено стан заходу (ID: " + id + "): " + current.getState() + " -> " + next);

@@ -3,4 +3,41 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
          version="4.0">
+
+    <servlet>
+        <servlet-name>ObjectItemServlet</servlet-name>
+        <servlet-class>ua.edu.nupp.kpp.server.ObjectItemServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ObjectItemServlet</servlet-name>
+        <url-pattern>/objects</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>EnergyAuditServlet</servlet-name>
+        <servlet-class>ua.edu.nupp.kpp.server.EnergyAuditServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EnergyAuditServlet</servlet-name>
+        <url-pattern>/audits</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>MeasureServlet</servlet-name>
+        <servlet-class>ua.edu.nupp.kpp.server.MeasureServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>MeasureServlet</servlet-name>
+        <url-pattern>/measures</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>ConsumptionRecordServlet</servlet-name>
+        <servlet-class>ua.edu.nupp.kpp.server.ConsumptionRecordServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ConsumptionRecordServlet</servlet-name>
+        <url-pattern>/records</url-pattern>
+    </servlet-mapping>
+
 </web-app>

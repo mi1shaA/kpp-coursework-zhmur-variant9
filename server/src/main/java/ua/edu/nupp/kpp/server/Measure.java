@@ -22,7 +22,7 @@ public class Measure {
 
     public void setFactors(double f1, double f2, double f3) {
         if (f1 < 0 || f1 > 100 || f2 < 0 || f2 > 100 || f3 < 0 || f3 > 100) {
-            throw new IllegalArgumentException("Factors must be in range 0-100");
+            throw new IllegalArgumentException("Фактори f1, f2 та f3 повинні знаходитися в діапазоні від 0 до 100");
         }
         this.f1 = f1;
         this.f2 = f2;
