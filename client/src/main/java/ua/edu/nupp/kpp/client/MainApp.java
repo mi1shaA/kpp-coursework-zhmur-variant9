@@ -4,11 +4,14 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
@@ -21,11 +24,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -59,6 +58,12 @@ public class MainApp extends Application {
     private final TextField recResource = new TextField();
     private final TextField recValue = new TextField();
     private final TextField recPeriod = new TextField();
+
+    private final Button importButton = new Button("Імпортувати CSV");
+    private final Button cancelButton = new Button("Скасувати");
+    private final ProgressBar importProgress = new ProgressBar(0);
+    private final Label importStatus = new Label("CSV ще не імпортовано");
+    private ImportRecordsTask currentTask;
 
     @Override
     public void start(Stage stage) {
@@ -107,7 +112,7 @@ public class MainApp extends Application {
             ObjectItem sel = selected(objectTable);
             api.deleteObject(sel.getId());
             clear(objCode, objName, objAddress);
-            refreshAll(); // залежні аудити, заходи й записи видаляються разом з об'єктом
+            refreshAll();
         }));
         Button refresh = new Button("Оновити");
         refresh.setOnAction(e -> safe(this::refreshAll));
@@ -184,7 +189,7 @@ public class MainApp extends Application {
         addColumn(measureTable, "Стан", "state");
 
         mState.setItems(FXCollections.observableArrayList(MeasureState.values()));
-        mIndex.setEditable(false); // обчислюється сервером
+        mIndex.setEditable(false);
         mIndex.setPromptText("обчислює сервер");
 
         measureTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, m) -> {
@@ -297,13 +302,20 @@ public class MainApp extends Application {
         }));
         Button refresh = new Button("Оновити");
         refresh.setOnAction(e -> safe(this::refreshAll));
-        Button importOne = new Button("Імпорт 1 рядка CSV");
-        importOne.setOnAction(e -> safe(() -> {
-            api.addRecord(readTestRecord());
-            refreshRecords();
-        }));
 
-        return tab("Споживання", recordTable, form, new HBox(10, add, update, delete, refresh, importOne));
+        importButton.setOnAction(e -> startImport());
+        cancelButton.setDisable(true);
+        cancelButton.setOnAction(e -> {
+            ImportRecordsTask task = currentTask;
+            if (task != null) {
+                task.cancel();
+            }
+        });
+        importProgress.setPrefWidth(260);
+        HBox importBox = new HBox(10, importButton, cancelButton, importProgress, importStatus);
+        importBox.setAlignment(Pos.CENTER_LEFT);
+
+        return tab("Споживання", recordTable, form, new HBox(10, add, update, delete, refresh), importBox);
     }
 
     private ConsumptionRecord readRecord(Long id) {
@@ -316,30 +328,58 @@ public class MainApp extends Application {
         return r;
     }
 
-    private ConsumptionRecord readTestRecord() {
-        Path file = Path.of("sample-data", "consumption_records.csv");
-        List<String> lines;
-        try {
-            lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new IllegalStateException("Не вдалося прочитати файл " + file + ": " + e.getMessage(), e);
+    private void startImport() {
+        ImportRecordsTask task = new ImportRecordsTask(Path.of("sample-data", "consumption_records.csv"), api);
+        currentTask = task;
+
+        importButton.setDisable(true);
+        cancelButton.setDisable(false);
+        importProgress.progressProperty().bind(task.progressProperty());
+        importStatus.textProperty().bind(task.messageProperty());
+
+        task.setOnSucceeded(e -> {
+            finishImport();
+            importStatus.setText(importSummary(task));
+            safe(this::refreshRecords);
+        });
+        task.setOnFailed(e -> {
+            finishImport();
+            Throwable error = task.getException();
+            String message = error == null || error.getMessage() == null || error.getMessage().isBlank()
+                    ? "Невідома помилка імпорту" : error.getMessage();
+            LOG.log(Level.WARNING, "CSV-імпорт завершився помилкою", error);
+            importStatus.setText("Імпорт перервано");
+            showError(message);
+            safe(this::refreshRecords);
+        });
+        task.setOnCancelled(e -> {
+            finishImport();
+            importStatus.setText("Імпорт скасовано. Частина записів могла бути вже збережена");
+            safe(this::refreshRecords);
+        });
+
+        Thread worker = new Thread(task, "csv-import");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    private void finishImport() {
+        importProgress.progressProperty().unbind();
+        importStatus.textProperty().unbind();
+        importButton.setDisable(false);
+        cancelButton.setDisable(true);
+        currentTask = null;
+    }
+
+    private String importSummary(ImportRecordsTask task) {
+        if (task.getTotal() == 0) {
+            return "У файлі немає рядків для імпорту";
         }
-        if (lines.size() < 2) {
-            throw new IllegalArgumentException("У CSV-файлі немає рядків даних");
+        String text = "Готово. Імпортовано записів: " + task.getImported();
+        if (task.getSkipped() > 0) {
+            text += ". Пропущено некоректних рядків: " + task.getSkipped() + " (деталі в журналі)";
         }
-        String[] parts = lines.get(1).split(";", -1); // перший рядок — заголовок, береться наступний
-        if (parts.length != 4) {
-            throw new IllegalArgumentException("Некоректна кількість стовпців: " + parts.length);
-        }
-        try {
-            long objectId = Long.parseLong(parts[0].trim());
-            String resourceType = parts[1].trim();
-            double value = Double.parseDouble(parts[2].trim().replace(',', '.'));
-            String period = parts[3].trim();
-            return new ConsumptionRecord(null, objectId, resourceType, value, period);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Некоректне число в CSV-рядку: " + lines.get(1));
-        }
+        return text;
     }
 
     private void refreshObjects() {
@@ -434,10 +474,11 @@ public class MainApp extends Application {
         }
     }
 
-    private Tab tab(String title, TableView<?> table, GridPane form, HBox buttons) {
+    private Tab tab(String title, TableView<?> table, GridPane form, Node... controls) {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         VBox.setVgrow(table, Priority.ALWAYS);
-        VBox box = new VBox(10, table, form, buttons);
+        VBox box = new VBox(10, table, form);
+        box.getChildren().addAll(controls);
         box.setPadding(new Insets(10));
         return new Tab(title, box);
     }
