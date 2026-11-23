@@ -11,12 +11,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * HTTP-рівень для сутності «Захід».
- * GET  — читання списку;
- * POST — action=add | update | delete | transition.
- * Предметні правила (валідація, зв'язки, інтегральний показник, життєвий цикл) виконує MeasureService.
- */
 public class MeasureServlet extends HttpServlet {
     private static final Logger LOG = Logger.getLogger(MeasureServlet.class.getName());
     private final MeasureService service = new MeasureService();
@@ -55,7 +49,6 @@ public class MeasureServlet extends HttpServlet {
         }
     }
 
-    /** Технічне перетворення параметрів запиту в Java-об'єкт (без предметних перевірок). */
     private Measure read(HttpServletRequest req, boolean withId) {
         Measure measure = new Measure();
         if (withId) {
@@ -63,12 +56,10 @@ public class MeasureServlet extends HttpServlet {
         }
         measure.setAuditId(parseLong(req, "auditId"));
         measure.setTitle(text(req, "title"));
-        // f1, f2, f3 вводить користувач; integralIndex і state визначає Service
         measure.setFactors(parseDouble(req, "f1"), parseDouble(req, "f2"), parseDouble(req, "f3"));
         return measure;
     }
 
-    /** Технічне перетворення String -> enum; чи дозволений перехід, вирішує MeasureService. */
     private MeasureState parseState(HttpServletRequest req) {
         String value = req.getParameter("state");
         try {
@@ -108,7 +99,6 @@ public class MeasureServlet extends HttpServlet {
         mapper.writeValue(resp.getWriter(), body);
     }
 
-    /** IllegalArgumentException -> 400 (предметна помилка), решта -> 500. */
     private void writeError(HttpServletResponse resp, Exception e) throws IOException {
         if (e instanceof IllegalArgumentException) {
             writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", String.valueOf(e.getMessage())));

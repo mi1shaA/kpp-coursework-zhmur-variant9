@@ -11,12 +11,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * HTTP-рівень для сутності «Запис споживання».
- * GET  — читання списку;
- * POST — action=add | update | delete.
- * Предметні правила (валідація, зв'язки, існування об'єкта) виконує ConsumptionRecordService.
- */
 public class ConsumptionRecordServlet extends HttpServlet {
     private static final Logger LOG = Logger.getLogger(ConsumptionRecordServlet.class.getName());
     private final ConsumptionRecordService service = new ConsumptionRecordService();
@@ -53,7 +47,6 @@ public class ConsumptionRecordServlet extends HttpServlet {
         }
     }
 
-    /** Технічне перетворення параметрів запиту в Java-об'єкт (без предметних перевірок). */
     private ConsumptionRecord read(HttpServletRequest req, boolean withId) {
         ConsumptionRecord record = new ConsumptionRecord();
         if (withId) {
@@ -96,7 +89,6 @@ public class ConsumptionRecordServlet extends HttpServlet {
         mapper.writeValue(resp.getWriter(), body);
     }
 
-    /** IllegalArgumentException -> 400 (предметна помилка), решта -> 500. */
     private void writeError(HttpServletResponse resp, Exception e) throws IOException {
         if (e instanceof IllegalArgumentException) {
             writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", String.valueOf(e.getMessage())));

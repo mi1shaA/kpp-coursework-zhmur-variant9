@@ -11,12 +11,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * HTTP-рівень для сутності «Енергоаудит».
- * GET  — читання списку;
- * POST — action=add | update | delete.
- * Предметні правила (валідація, зв'язки, існування об'єкта) виконує EnergyAuditService.
- */
 public class EnergyAuditServlet extends HttpServlet {
     private static final Logger LOG = Logger.getLogger(EnergyAuditServlet.class.getName());
     private final EnergyAuditService service = new EnergyAuditService();
@@ -53,7 +47,6 @@ public class EnergyAuditServlet extends HttpServlet {
         }
     }
 
-    /** Технічне перетворення параметрів запиту в Java-об'єкт (без предметних перевірок). */
     private EnergyAudit read(HttpServletRequest req, boolean withId) {
         EnergyAudit audit = new EnergyAudit();
         if (withId) {
@@ -96,7 +89,6 @@ public class EnergyAuditServlet extends HttpServlet {
         mapper.writeValue(resp.getWriter(), body);
     }
 
-    /** IllegalArgumentException -> 400 (предметна помилка), решта -> 500. */
     private void writeError(HttpServletResponse resp, Exception e) throws IOException {
         if (e instanceof IllegalArgumentException) {
             writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", String.valueOf(e.getMessage())));

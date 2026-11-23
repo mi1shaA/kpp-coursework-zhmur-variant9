@@ -11,12 +11,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * HTTP-рівень для сутності «Об'єкт».
- * GET  — читання списку;
- * POST — action=add | update | delete.
- * Предметні правила (валідація, зв'язки) виконує ObjectItemService.
- */
 public class ObjectItemServlet extends HttpServlet {
     private static final Logger LOG = Logger.getLogger(ObjectItemServlet.class.getName());
     private final ObjectItemService service = new ObjectItemService();
@@ -53,7 +47,6 @@ public class ObjectItemServlet extends HttpServlet {
         }
     }
 
-    /** Технічне перетворення параметрів запиту в Java-об'єкт (без предметних перевірок). */
     private ObjectItem read(HttpServletRequest req, boolean withId) {
         ObjectItem item = new ObjectItem();
         if (withId) {
@@ -95,7 +88,6 @@ public class ObjectItemServlet extends HttpServlet {
         mapper.writeValue(resp.getWriter(), body);
     }
 
-    /** IllegalArgumentException -> 400 (предметна помилка), решта -> 500. */
     private void writeError(HttpServletResponse resp, Exception e) throws IOException {
         if (e instanceof IllegalArgumentException) {
             writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", String.valueOf(e.getMessage())));
